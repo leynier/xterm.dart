@@ -229,13 +229,14 @@ class BufferLine with IndexedItem {
     }
   }
 
-  void resize(int length) {
+  void resize(int length, {bool clearNewCells = false}) {
     assert(length >= 0);
 
     if (length == _length) {
       return;
     }
 
+    final oldLength = _length;
     if (length > _length) {
       final newBufferSize = _calcCapacity(length) * _cellSize;
 
@@ -247,6 +248,9 @@ class BufferLine with IndexedItem {
     }
 
     _length = length;
+    if (clearNewCells && length > oldLength) {
+      eraseRange(oldLength, length, CursorStyle.empty);
+    }
 
     for (var i = 0; i < _anchors.length; i++) {
       final anchor = _anchors[i];

@@ -67,6 +67,22 @@ void main() {
     });
   });
 
+  group('Terminal alternate buffer resize', () {
+    test('clears hidden cells that become visible after growing', () {
+      final terminal = Terminal(reflowEnabled: false);
+
+      terminal
+        ..resize(12, 4)
+        ..write('\x1b[?1049h')
+        ..write('left-stale')
+        ..resize(4, 4)
+        ..write('\r\x1b[Knew')
+        ..resize(12, 4);
+
+      expect(terminal.buffer.lines[0].toString(), 'new');
+    });
+  });
+
   group('Terminal.reflowEnabled', () {
     test('prevents reflow when set to false', () {
       final terminal = Terminal(reflowEnabled: false);

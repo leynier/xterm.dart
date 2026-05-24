@@ -475,7 +475,9 @@ class Buffer {
 
         lines.replaceWith(reflowResult);
       } else {
-        lines.forEach((item) => item.resize(newWidth));
+        lines.forEach(
+          (item) => item.resize(newWidth, clearNewCells: isAltBuffer),
+        );
       }
     }
   }
