@@ -50,6 +50,23 @@ void main() {
     });
   });
 
+  group('Terminal scroll region', () {
+    test('handles reverse index before line feed', () {
+      final terminal = Terminal(maxLines: 10000);
+
+      terminal
+        ..resize(56, 27)
+        ..resize(105, 35)
+        ..write('\x1b[?2026h\x1b[1;35r\x1b[1;1H')
+        ..write('\x1bM\x1bM\x1bM\x1bM\x1bM\x1bM\x1bM\x1bM\x1bM')
+        ..write('\x1b[r\x1b[1;9r\x1b[1;1H\r\n');
+
+      for (var i = 0; i < 12; i++) {
+        terminal.write('\x1b[;m\x1b[K\x1b[m\x1b[m\x1b[0m\r\n');
+      }
+    });
+  });
+
   group('Terminal.reflowEnabled', () {
     test('prevents reflow when set to false', () {
       final terminal = Terminal(reflowEnabled: false);

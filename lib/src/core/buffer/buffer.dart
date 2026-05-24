@@ -206,22 +206,26 @@ class Buffer {
   }
 
   void scrollDown(int lines) {
-    for (var i = absoluteMarginBottom; i >= absoluteMarginTop; i--) {
-      if (i >= absoluteMarginTop + lines) {
-        this.lines[i] = this.lines[i - lines];
-      } else {
-        this.lines[i] = _newEmptyLine();
-      }
+    lines = min(lines, absoluteMarginBottom - absoluteMarginTop + 1);
+    final linesToMove = absoluteMarginBottom - absoluteMarginTop + 1 - lines;
+    for (var i = 0; i < linesToMove; i++) {
+      final index = absoluteMarginBottom - i;
+      this.lines[index] = this.lines.swap(index - lines, _newEmptyLine());
+    }
+    for (var i = 0; i < lines; i++) {
+      this.lines[absoluteMarginTop + i] = _newEmptyLine();
     }
   }
 
   void scrollUp(int lines) {
-    for (var i = absoluteMarginTop; i <= absoluteMarginBottom; i++) {
-      if (i <= absoluteMarginBottom - lines) {
-        this.lines[i] = this.lines[i + lines];
-      } else {
-        this.lines[i] = _newEmptyLine();
-      }
+    lines = min(lines, absoluteMarginBottom - absoluteMarginTop + 1);
+    final linesToMove = absoluteMarginBottom - absoluteMarginTop + 1 - lines;
+    for (var i = 0; i < linesToMove; i++) {
+      final index = absoluteMarginTop + i;
+      this.lines[index] = this.lines.swap(index + lines, _newEmptyLine());
+    }
+    for (var i = 0; i < lines; i++) {
+      this.lines[absoluteMarginBottom - i] = _newEmptyLine();
     }
   }
 
