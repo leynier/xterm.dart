@@ -124,6 +124,57 @@ void main() {
 
       expect(terminal.buffer.lines[0].toString(), 'new');
     });
+
+    test('clears hidden cells with reflow enabled after width growth', () {
+      final terminal = Terminal();
+
+      terminal
+        ..resize(18, 4)
+        ..write('\x1b[?25l')
+        ..write('Claude Code ---- stale-right');
+
+      terminal
+        ..resize(10, 4)
+        ..write('\x1b[1;1H\x1b[2KClaude');
+
+      terminal.resize(18, 4);
+
+      expect(terminal.buffer.lines[0].toString(), 'Claude');
+    });
+
+    test('discards incremental resize scrollback for cursor-hidden redraws',
+        () {
+      final terminal = Terminal();
+
+      terminal
+        ..resize(24, 8)
+        ..write('\x1b[?25l');
+
+      for (var i = 0; i < 8; i++) {
+        terminal.write('\x1b[${i + 1};1Hold frame one $i');
+      }
+
+      terminal.resize(24, 6);
+      for (var i = 0; i < 6; i++) {
+        terminal.write('\x1b[${i + 1};1H\x1b[2Kold frame two $i');
+      }
+
+      terminal.resize(24, 4);
+      for (var i = 0; i < 4; i++) {
+        terminal.write('\x1b[${i + 1};1H\x1b[2Knew frame $i');
+      }
+
+      terminal.resize(24, 8);
+
+      expect(terminal.buffer.lines[0].toString(), 'new frame 0');
+      expect(terminal.buffer.lines[1].toString(), 'new frame 1');
+      expect(terminal.buffer.lines[2].toString(), 'new frame 2');
+      expect(terminal.buffer.lines[3].toString(), 'new frame 3');
+      expect(terminal.buffer.lines[4].toString(), isEmpty);
+      expect(terminal.buffer.lines[5].toString(), isEmpty);
+      expect(terminal.buffer.lines[6].toString(), isEmpty);
+      expect(terminal.buffer.lines[7].toString(), isEmpty);
+    });
   });
 
   group('Terminal.reflowEnabled', () {

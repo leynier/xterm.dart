@@ -473,7 +473,9 @@ class Buffer {
 
     // 2. Adjust the width.
     if (newWidth != oldWidth) {
-      if (terminal.reflowEnabled && !isAltBuffer) {
+      if (terminal.reflowEnabled &&
+          !isAltBuffer &&
+          !clearMainApplicationCells) {
         final reflowResult = reflow(lines, oldWidth, newWidth);
 
         while (reflowResult.length < newHeight) {
