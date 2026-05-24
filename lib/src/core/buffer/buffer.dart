@@ -439,8 +439,15 @@ class Buffer {
   }
 
   void resize(int oldWidth, int oldHeight, int newWidth, int newHeight) {
+    final clearMainApplicationCells =
+        !isAltBuffer && !terminal.cursorVisibleMode;
+
     // 1. Adjust the height.
     if (newHeight > oldHeight) {
+      if (clearMainApplicationCells && scrollBack > 0) {
+        lines.trimStart(min(newHeight - oldHeight, scrollBack));
+      }
+
       // Grow larger
       for (var i = 0; i < newHeight - oldHeight; i++) {
         if (newHeight > lines.length) {
@@ -476,7 +483,10 @@ class Buffer {
         lines.replaceWith(reflowResult);
       } else {
         lines.forEach(
-          (item) => item.resize(newWidth, clearNewCells: isAltBuffer),
+          (item) => item.resize(
+            newWidth,
+            clearNewCells: isAltBuffer || clearMainApplicationCells,
+          ),
         );
       }
     }

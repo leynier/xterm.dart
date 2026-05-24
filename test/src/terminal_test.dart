@@ -83,6 +83,49 @@ void main() {
     });
   });
 
+  group('Terminal main buffer application resize', () {
+    test('does not reveal stale scrollback after cursor-hidden redraw', () {
+      final terminal = Terminal();
+
+      terminal
+        ..resize(20, 6)
+        ..write('\x1b[?25l');
+
+      for (var i = 0; i < 6; i++) {
+        terminal.write('\x1b[${i + 1};1Hold row $i');
+      }
+
+      terminal.resize(20, 3);
+
+      for (var i = 0; i < 3; i++) {
+        terminal.write('\x1b[${i + 1};1H\x1b[2Knew row $i');
+      }
+
+      terminal.resize(20, 6);
+
+      expect(terminal.buffer.lines[0].toString(), 'new row 0');
+      expect(terminal.buffer.lines[1].toString(), 'new row 1');
+      expect(terminal.buffer.lines[2].toString(), 'new row 2');
+      expect(terminal.buffer.lines[3].toString(), isEmpty);
+      expect(terminal.buffer.lines[4].toString(), isEmpty);
+      expect(terminal.buffer.lines[5].toString(), isEmpty);
+    });
+
+    test('clears hidden cells after cursor-hidden width growth', () {
+      final terminal = Terminal(reflowEnabled: false);
+
+      terminal
+        ..resize(12, 3)
+        ..write('\x1b[?25l')
+        ..write('left-stale')
+        ..resize(4, 3)
+        ..write('\r\x1b[Knew')
+        ..resize(12, 3);
+
+      expect(terminal.buffer.lines[0].toString(), 'new');
+    });
+  });
+
   group('Terminal.reflowEnabled', () {
     test('prevents reflow when set to false', () {
       final terminal = Terminal(reflowEnabled: false);
