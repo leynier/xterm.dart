@@ -97,11 +97,24 @@ class TerminalPainter {
       ..strokeWidth = 1;
 
     if (!hasFocus) {
-      paint.style = PaintingStyle.stroke;
-      canvas.drawRect(offset & _cellSize, paint);
+      if (cursorType == TerminalCursorType.block) {
+        paint.style = PaintingStyle.stroke;
+        canvas.drawRect(offset & _cellSize, paint);
+      } else {
+        _paintShapedCursor(canvas, offset, cursorType, paint);
+      }
       return;
     }
 
+    _paintShapedCursor(canvas, offset, cursorType, paint);
+  }
+
+  void _paintShapedCursor(
+    Canvas canvas,
+    Offset offset,
+    TerminalCursorType cursorType,
+    Paint paint,
+  ) {
     switch (cursorType) {
       case TerminalCursorType.block:
         paint.style = PaintingStyle.fill;
@@ -109,14 +122,17 @@ class TerminalPainter {
         return;
       case TerminalCursorType.underline:
         return canvas.drawLine(
-          Offset(offset.dx, _cellSize.height - 1),
-          Offset(offset.dx + _cellSize.width, _cellSize.height - 1),
+          Offset(offset.dx, offset.dy + _cellSize.height - 1),
+          Offset(
+            offset.dx + _cellSize.width,
+            offset.dy + _cellSize.height - 1,
+          ),
           paint,
         );
       case TerminalCursorType.verticalBar:
         return canvas.drawLine(
-          Offset(offset.dx, 0),
-          Offset(offset.dx, _cellSize.height),
+          Offset(offset.dx, offset.dy),
+          Offset(offset.dx, offset.dy + _cellSize.height),
           paint,
         );
     }

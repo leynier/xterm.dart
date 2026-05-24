@@ -23,12 +23,28 @@ const _kDefaultFontFamilyFallback = [
   'sans-serif',
 ];
 
+FontWeight _fontWeightFromValue(int value) {
+  final normalized = (value / 100).round().clamp(1, 9) * 100;
+  return switch (normalized) {
+    100 => FontWeight.w100,
+    200 => FontWeight.w200,
+    300 => FontWeight.w300,
+    400 => FontWeight.w400,
+    500 => FontWeight.w500,
+    600 => FontWeight.w600,
+    700 => FontWeight.w700,
+    800 => FontWeight.w800,
+    _ => FontWeight.w900,
+  };
+}
+
 class TerminalStyle {
   const TerminalStyle({
     this.fontSize = _kDefaultFontSize,
     this.height = _kDefaultHeight,
     this.fontFamily = _kDefaultFontFamily,
     this.fontFamilyFallback = _kDefaultFontFamilyFallback,
+    this.fontWeight,
   });
 
   factory TerminalStyle.fromTextStyle(TextStyle textStyle) {
@@ -40,6 +56,7 @@ class TerminalStyle {
           _kDefaultFontFamily,
       fontFamilyFallback:
           textStyle.fontFamilyFallback ?? _kDefaultFontFamilyFallback,
+      fontWeight: textStyle.fontWeight?.value,
     );
   }
 
@@ -50,6 +67,8 @@ class TerminalStyle {
   final String fontFamily;
 
   final List<String> fontFamilyFallback;
+
+  final int? fontWeight;
 
   TextStyle toTextStyle({
     Color? color,
@@ -65,7 +84,9 @@ class TerminalStyle {
       fontFamilyFallback: fontFamilyFallback,
       color: color,
       backgroundColor: backgroundColor,
-      fontWeight: bold ? FontWeight.bold : FontWeight.normal,
+      fontWeight: fontWeight == null
+          ? (bold ? FontWeight.bold : FontWeight.normal)
+          : _fontWeightFromValue(bold ? fontWeight! + 200 : fontWeight!),
       fontStyle: italic ? FontStyle.italic : FontStyle.normal,
       decoration: underline ? TextDecoration.underline : TextDecoration.none,
     );
@@ -76,12 +97,14 @@ class TerminalStyle {
     double? height,
     String? fontFamily,
     List<String>? fontFamilyFallback,
+    int? fontWeight,
   }) {
     return TerminalStyle(
       fontSize: fontSize ?? this.fontSize,
       height: height ?? this.height,
       fontFamily: fontFamily ?? this.fontFamily,
       fontFamilyFallback: fontFamilyFallback ?? this.fontFamilyFallback,
+      fontWeight: fontWeight ?? this.fontWeight,
     );
   }
 }

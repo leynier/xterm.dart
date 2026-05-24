@@ -41,6 +41,7 @@ class TerminalView extends StatefulWidget {
     this.keyboardType = TextInputType.emailAddress,
     this.keyboardAppearance = Brightness.dark,
     this.cursorType = TerminalCursorType.block,
+    this.cursorBlink = false,
     this.alwaysShowCursor = false,
     this.deleteDetection = false,
     this.shortcuts,
@@ -109,6 +110,9 @@ class TerminalView extends StatefulWidget {
 
   /// The type of cursor to use. [TerminalCursorType.block] by default.
   final TerminalCursorType cursorType;
+
+  /// Whether the cursor should blink while the terminal has focus.
+  final bool cursorBlink;
 
   /// Whether to always show the cursor. This is useful for debugging.
   /// [false] by default.
@@ -233,6 +237,7 @@ class TerminalViewState extends State<TerminalView> {
           theme: widget.theme,
           focusNode: _focusNode,
           cursorType: widget.cursorType,
+          cursorBlink: widget.cursorBlink,
           alwaysShowCursor: widget.alwaysShowCursor,
           onEditableRect: _onEditableRect,
           composingText: _composingText,
@@ -466,6 +471,7 @@ class _TerminalView extends LeafRenderObjectWidget {
     required this.theme,
     required this.focusNode,
     required this.cursorType,
+    required this.cursorBlink,
     required this.alwaysShowCursor,
     this.onEditableRect,
     this.composingText,
@@ -491,6 +497,8 @@ class _TerminalView extends LeafRenderObjectWidget {
 
   final TerminalCursorType cursorType;
 
+  final bool cursorBlink;
+
   final bool alwaysShowCursor;
 
   final EditableRectCallback? onEditableRect;
@@ -510,6 +518,7 @@ class _TerminalView extends LeafRenderObjectWidget {
       theme: theme,
       focusNode: focusNode,
       cursorType: cursorType,
+      cursorBlink: cursorBlink,
       alwaysShowCursor: alwaysShowCursor,
       onEditableRect: onEditableRect,
       composingText: composingText,
@@ -529,6 +538,7 @@ class _TerminalView extends LeafRenderObjectWidget {
       ..theme = theme
       ..focusNode = focusNode
       ..cursorType = cursorType
+      ..cursorBlink = cursorBlink
       ..alwaysShowCursor = alwaysShowCursor
       ..onEditableRect = onEditableRect
       ..composingText = composingText;
