@@ -107,6 +107,10 @@ class _LineReflow {
 
     while (cellsLeft > 0) {
       final bufferRemainingCells = newWidth - _builder.length;
+      if (bufferRemainingCells <= 0) {
+        _lines.add(_builder.take(wrapped: _lines.isNotEmpty));
+        continue;
+      }
 
       // How many cells we should copy in this iteration.
       var cellsToCopy = cellsLeft;
@@ -120,7 +124,9 @@ class _LineReflow {
       }
 
       // Leave the last cell to the next iteration if it's a wide char.
-      if (lineFilled && line.getWidth(from + cellsToCopy - 1) == 2) {
+      if (lineFilled &&
+          cellsToCopy > 1 &&
+          line.getWidth(from + cellsToCopy - 1) == 2) {
         cellsToCopy--;
       }
 
@@ -191,6 +197,9 @@ List<BufferLine> reflow(
 
   for (var line in result) {
     line.resize(newWidth);
+    if (newWidth > 0 && line.getWidth(newWidth - 1) == 2) {
+      line.resetCell(newWidth - 1);
+    }
   }
 
   return result;
