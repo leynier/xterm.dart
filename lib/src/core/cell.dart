@@ -6,6 +6,7 @@ class CellData {
     required this.background,
     required this.flags,
     required this.content,
+    this.text,
   });
 
   factory CellData.empty() {
@@ -14,6 +15,7 @@ class CellData {
       background: 0,
       flags: 0,
       content: 0,
+      text: null,
     );
   }
 
@@ -25,13 +27,15 @@ class CellData {
 
   int content;
 
+  String? text;
+
   int getHash() {
-    return hashValues(foreground, background, flags, content);
+    return hashValues(foreground, background, flags, content, text);
   }
 
   @override
   String toString() {
-    return 'CellData{foreground: $foreground, background: $background, flags: $flags, content: $content}';
+    return 'CellData{foreground: $foreground, background: $background, flags: $flags, content: $content, text: $text}';
   }
 }
 

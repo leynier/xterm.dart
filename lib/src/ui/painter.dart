@@ -188,7 +188,10 @@ class TerminalPainter {
   @pragma('vm:prefer-inline')
   void paintCellForeground(Canvas canvas, Offset offset, CellData cellData) {
     final charCode = cellData.content & CellContent.codepointMask;
-    if (charCode == 0) return;
+    final extendedText = cellData.text;
+    if (charCode == 0 && (extendedText == null || extendedText.isEmpty)) {
+      return;
+    }
 
     final cacheKey = cellData.getHash() ^ _textScaler.hashCode;
     var paragraph = _paragraphCache.getLayoutFromCache(cacheKey);
@@ -217,8 +220,10 @@ class TerminalPainter {
       // workaround the regular space CodePoint 0x20 is replaced with
       // the CodePoint 0xA0. This is a non breaking space and a underline can be
       // drawn below it.
-      var char = String.fromCharCode(charCode);
-      if (cellFlags & CellFlags.underline != 0 && charCode == 0x20) {
+      var char = extendedText ?? String.fromCharCode(charCode);
+      if (cellFlags & CellFlags.underline != 0 &&
+          charCode == 0x20 &&
+          extendedText == null) {
         char = String.fromCharCode(0xA0);
       }
 

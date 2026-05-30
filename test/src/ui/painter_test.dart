@@ -190,6 +190,31 @@ void main() {
       );
     });
   });
+
+  group('TerminalPainter.paintCellForeground', () {
+    test('paints extended cell text', () async {
+      final painter = _createPainter();
+      final pixels = await _paintCellForeground(
+        painter,
+        CellData(
+          foreground: 0,
+          background: 0,
+          flags: 0,
+          content: 'i'.codeUnitAt(0) | (1 << CellContent.widthShift),
+          text: 'i\u0301',
+        ),
+      );
+
+      expect(
+        _paintedPixels(
+          pixels,
+          ui.Rect.fromLTWH(
+              0, 0, painter.cellSize.width, painter.cellSize.height),
+        ),
+        greaterThan(0),
+      );
+    });
+  });
 }
 
 const _imageSize = 96;
@@ -217,6 +242,26 @@ Future<Uint8List> _paintCursor(
     cursorType: cursorType,
     hasFocus: hasFocus,
   );
+
+  final picture = recorder.endRecording();
+  final image = await picture.toImage(_imageSize, _imageSize);
+  final byteData = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+  final pixels = Uint8List.fromList(byteData!.buffer.asUint8List());
+
+  image.dispose();
+  picture.dispose();
+
+  return pixels;
+}
+
+Future<Uint8List> _paintCellForeground(
+  TerminalPainter painter,
+  CellData cellData,
+) async {
+  final recorder = ui.PictureRecorder();
+  final canvas = ui.Canvas(recorder);
+
+  painter.paintCellForeground(canvas, ui.Offset.zero, cellData);
 
   final picture = recorder.endRecording();
   final image = await picture.toImage(_imageSize, _imageSize);

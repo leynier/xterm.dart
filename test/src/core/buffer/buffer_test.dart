@@ -82,6 +82,16 @@ void main() {
         startsWith('llo\nce '),
       );
     });
+
+    test('preserves combining marks across reflow', () {
+      final terminal = Terminal();
+      terminal.resize(4, 5);
+
+      terminal.write('asi\u0301 que');
+      terminal.resize(3, 5);
+
+      expect(terminal.buffer.getText(), startsWith('asi\u0301 que'));
+    });
   });
 
   group('Buffer.resize()', () {
@@ -242,6 +252,50 @@ void main() {
       expect(terminal.buffer.lines[0].toString(), '123');
       expect(terminal.buffer.lines[1].toString(), '4');
       expect(terminal.buffer.lines[2].toString(), '');
+    });
+  });
+
+  group('Buffer combining mark mutations', () {
+    test('erase clears extended cell text', () {
+      final terminal = Terminal();
+      terminal.resize(10, 5);
+      terminal.write('a\u0301b');
+
+      terminal.setCursor(0, 0);
+      terminal.buffer.eraseChars(1);
+
+      expect(terminal.buffer.lines[0].getText(), equals(' b'));
+      final cellData = CellData.empty();
+      terminal.buffer.lines[0].getCellData(0, cellData);
+      expect(cellData.text, isNull);
+    });
+
+    test('delete shifts extended cell text with moved cells', () {
+      final terminal = Terminal();
+      terminal.resize(10, 5);
+      terminal.write('xa\u0301b');
+
+      terminal.setCursor(0, 0);
+      terminal.buffer.deleteChars(1);
+
+      expect(terminal.buffer.lines[0].getText(), equals('a\u0301b'));
+      final cellData = CellData.empty();
+      terminal.buffer.lines[0].getCellData(0, cellData);
+      expect(cellData.text, equals('a\u0301'));
+    });
+
+    test('insert shifts extended cell text with moved cells', () {
+      final terminal = Terminal();
+      terminal.resize(10, 5);
+      terminal.write('a\u0301b');
+
+      terminal.setCursor(0, 0);
+      terminal.buffer.insertBlankChars(1);
+
+      expect(terminal.buffer.lines[0].getText(), equals(' a\u0301b'));
+      final cellData = CellData.empty();
+      terminal.buffer.lines[0].getCellData(1, cellData);
+      expect(cellData.text, equals('a\u0301'));
     });
   });
 }

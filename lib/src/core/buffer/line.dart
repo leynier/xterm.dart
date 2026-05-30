@@ -27,6 +27,8 @@ class BufferLine with IndexedItem {
 
   Uint32List _data;
 
+  Map<int, String>? _extendedText;
+
   Uint32List get data => _data;
 
   var isWrapped = false;
@@ -67,6 +69,7 @@ class BufferLine with IndexedItem {
     cellData.background = _data[offset + _cellBackground];
     cellData.flags = _data[offset + _cellAttributes];
     cellData.content = _data[offset + _cellContent];
+    cellData.text = _extendedText?[index];
   }
 
   CellData createCellData(int index) {
@@ -76,6 +79,7 @@ class BufferLine with IndexedItem {
     _data[offset + _cellBackground] = cellData.background;
     _data[offset + _cellAttributes] = cellData.flags;
     _data[offset + _cellContent] = cellData.content;
+    _setExtendedText(index, null);
     return cellData;
   }
 
@@ -93,6 +97,7 @@ class BufferLine with IndexedItem {
 
   void setContent(int index, int value) {
     _data[index * _cellSize + _cellContent] = value;
+    _setExtendedText(index, null);
   }
 
   void setCodePoint(int index, int char) {
@@ -106,6 +111,7 @@ class BufferLine with IndexedItem {
     _data[offset + _cellBackground] = style.background;
     _data[offset + _cellAttributes] = style.attrs;
     _data[offset + _cellContent] = char | (witdh << CellContent.widthShift);
+    _setExtendedText(index, null);
   }
 
   void setCellData(int index, CellData cellData) {
@@ -114,6 +120,7 @@ class BufferLine with IndexedItem {
     _data[offset + _cellBackground] = cellData.background;
     _data[offset + _cellAttributes] = cellData.flags;
     _data[offset + _cellContent] = cellData.content;
+    _setExtendedText(index, cellData.text);
   }
 
   void eraseCell(int index, CursorStyle style) {
@@ -122,6 +129,7 @@ class BufferLine with IndexedItem {
     _data[offset + _cellBackground] = style.background;
     _data[offset + _cellAttributes] = style.attrs;
     _data[offset + _cellContent] = 0;
+    _setExtendedText(index, null);
   }
 
   void resetCell(int index) {
@@ -130,6 +138,16 @@ class BufferLine with IndexedItem {
     _data[offset + _cellBackground] = 0;
     _data[offset + _cellAttributes] = 0;
     _data[offset + _cellContent] = 0;
+    _setExtendedText(index, null);
+  }
+
+  void appendCombiningMark(int index, int char) {
+    final codePoint = getCodePoint(index);
+    if (codePoint == 0) {
+      return;
+    }
+    final text = _extendedText?[index] ?? String.fromCharCode(codePoint);
+    _setExtendedText(index, text + String.fromCharCode(char));
   }
 
   /// Erase cells whose index satisfies [start] <= index < [end]. Erased cells
@@ -167,6 +185,7 @@ class BufferLine with IndexedItem {
         _data[i] = _data[i + moveOffset];
       }
     }
+    _removeExtendedTextCells(start, count);
 
     for (var i = _length - count; i < _length; i++) {
       eraseCell(i, style);
@@ -205,6 +224,7 @@ class BufferLine with IndexedItem {
         _data[i + moveOffset] = _data[i];
       }
     }
+    _insertExtendedTextCells(start, count);
 
     final end = min(start + count, _length);
     for (var i = start; i < end; i++) {
@@ -248,6 +268,7 @@ class BufferLine with IndexedItem {
     }
 
     _length = length;
+    _trimExtendedText(length);
     if (clearNewCells && length > oldLength) {
       eraseRange(oldLength, length, CursorStyle.empty);
     }
@@ -305,6 +326,10 @@ class BufferLine with IndexedItem {
     for (var i = 0; i < len * _cellSize; i++) {
       _data[dstOffset++] = src._data[srcOffset++];
     }
+
+    for (var i = 0; i < len; i++) {
+      _setExtendedText(dstCol + i, src._extendedText?[srcCol + i]);
+    }
   }
 
   static int _calcCapacity(int length) {
@@ -348,11 +373,73 @@ class BufferLine with IndexedItem {
         }
         builder.writeCharCode(0x20);
       } else if (i + width <= to) {
-        builder.writeCharCode(codePoint);
+        builder.write(_extendedText?[i] ?? String.fromCharCode(codePoint));
       }
     }
 
     return builder.toString();
+  }
+
+  void _setExtendedText(int index, String? value) {
+    if (value == null || value.isEmpty) {
+      final extendedText = _extendedText;
+      if (extendedText == null) {
+        return;
+      }
+      extendedText.remove(index);
+      if (extendedText.isEmpty) {
+        _extendedText = null;
+      }
+      return;
+    }
+
+    (_extendedText ??= <int, String>{})[index] = value;
+  }
+
+  void _removeExtendedTextCells(int start, int count) {
+    final extendedText = _extendedText;
+    if (extendedText == null || extendedText.isEmpty) {
+      return;
+    }
+
+    final next = <int, String>{};
+    for (final entry in extendedText.entries) {
+      if (entry.key < start) {
+        next[entry.key] = entry.value;
+      } else if (entry.key >= start + count) {
+        next[entry.key - count] = entry.value;
+      }
+    }
+    _extendedText = next.isEmpty ? null : next;
+  }
+
+  void _insertExtendedTextCells(int start, int count) {
+    final extendedText = _extendedText;
+    if (extendedText == null || extendedText.isEmpty) {
+      return;
+    }
+
+    final next = <int, String>{};
+    for (final entry in extendedText.entries) {
+      if (entry.key < start) {
+        next[entry.key] = entry.value;
+      } else if (entry.key + count < _length) {
+        next[entry.key + count] = entry.value;
+      }
+    }
+    _extendedText = next.isEmpty ? null : next;
+  }
+
+  void _trimExtendedText(int length) {
+    final extendedText = _extendedText;
+    if (extendedText == null || extendedText.isEmpty) {
+      return;
+    }
+
+    extendedText.removeWhere((index, _) => index >= length);
+    if (extendedText.isEmpty) {
+      _extendedText = null;
+    }
   }
 
   CellAnchor createAnchor(int offset) {

@@ -104,6 +104,43 @@ void main() {
 
       expect(terminalOutput.join(), 'ls -al');
     });
+
+    testWidgets('preserves composed accented text input', (tester) async {
+      final terminalOutput = <String>[];
+      final terminal = Terminal(onOutput: terminalOutput.add);
+
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: TerminalView(terminal, readOnly: false, autofocus: true),
+        ),
+      ));
+
+      await tester.tap(find.byType(TerminalView));
+      await tester.pump(Duration(seconds: 1));
+
+      binding.testTextInput.enterText('Hola como estás?');
+      await binding.idle();
+
+      expect(terminalOutput.join(), 'Hola como estás?');
+    });
+
+    testWidgets('attaches text input with current view id', (tester) async {
+      final terminal = Terminal();
+
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: TerminalView(terminal, readOnly: false, autofocus: true),
+        ),
+      ));
+
+      await tester.tap(find.byType(TerminalView));
+      await tester.pump(Duration(seconds: 1));
+
+      expect(
+        binding.testTextInput.setClientArgs?['viewId'],
+        tester.view.viewId,
+      );
+    });
   });
 
   group('TerminalView.focusNode', () {

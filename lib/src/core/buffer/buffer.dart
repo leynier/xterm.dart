@@ -110,6 +110,12 @@ class Buffer {
     codePoint = charset.translate(codePoint);
 
     final cellWidth = unicodeV11.wcwidth(codePoint);
+    if (codePoint != 0 &&
+        cellWidth == 0 &&
+        _appendCombiningMarkToPreviousCell(codePoint)) {
+      return;
+    }
+
     if (_cursorX >= terminal.viewWidth) {
       index();
       setCursorX(0);
@@ -119,7 +125,8 @@ class Buffer {
     }
 
     final line = currentLine;
-    line.setCell(_cursorX, codePoint, cellWidth, terminal.cursor);
+    final effectiveCellWidth = codePoint != 0 && cellWidth == 0 ? 1 : cellWidth;
+    line.setCell(_cursorX, codePoint, effectiveCellWidth, terminal.cursor);
 
     if (_cursorX < viewWidth) {
       _cursorX++;
@@ -128,6 +135,34 @@ class Buffer {
     if (cellWidth == 2) {
       writeChar(0);
     }
+  }
+
+  bool _appendCombiningMarkToPreviousCell(int codePoint) {
+    var line = currentLine;
+    var index = _cursorX - 1;
+
+    if (_cursorX <= 0) {
+      if (!line.isWrapped || absoluteCursorY <= 0) {
+        return false;
+      }
+      line = lines[absoluteCursorY - 1];
+      index = viewWidth - 1;
+    } else if (index >= viewWidth) {
+      index = viewWidth - 1;
+    }
+
+    if (index > 0 && line.getCodePoint(index) == 0) {
+      final previousWidth = line.getWidth(index - 1);
+      if (previousWidth == 2) {
+        index--;
+      }
+    }
+    if (line.getCodePoint(index) == 0) {
+      return false;
+    }
+
+    line.appendCombiningMark(index, codePoint);
+    return true;
   }
 
   /// The line at the current cursor position.

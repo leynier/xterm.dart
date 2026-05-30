@@ -46,6 +46,49 @@ void main() {
       expect(terminal.buffer.lines[0].getText(0, 3), equals('😀A'));
     });
 
+    test('keeps zero-width combining marks in the preceding cell', () {
+      final terminal = Terminal();
+      terminal.resize(20, 5);
+
+      terminal.write('asi\u0301 nin\u0303o');
+
+      final line = terminal.buffer.lines[0];
+      expect(line.getText(), equals('asi\u0301 nin\u0303o'));
+      expect(line.getTrimmedLength(), equals(8));
+      expect(line.getWidth(2), equals(1));
+      expect(line.getWidth(6), equals(1));
+
+      final accentedI = CellData.empty();
+      line.getCellData(2, accentedI);
+      expect(accentedI.text, equals('i\u0301'));
+
+      final accentedN = CellData.empty();
+      line.getCellData(6, accentedN);
+      expect(accentedN.text, equals('n\u0303'));
+    });
+
+    test('renders leading combining marks as spacing cells', () {
+      final terminal = Terminal();
+      terminal.resize(10, 5);
+
+      terminal.write('\u0301a');
+
+      final line = terminal.buffer.lines[0];
+      expect(line.getText(), equals('\u0301a'));
+      expect(line.getTrimmedLength(), equals(2));
+      expect(line.getWidth(0), equals(1));
+    });
+
+    test('keeps combining marks on the final column before wrap', () {
+      final terminal = Terminal();
+      terminal.resize(3, 5);
+
+      terminal.write('abi\u0301');
+
+      expect(terminal.buffer.lines[0].getText(), equals('abi\u0301'));
+      expect(terminal.buffer.lines[1].getText(), isEmpty);
+    });
+
     test('can specify a range', () {
       final terminal = Terminal();
       terminal.write('Hello World');
