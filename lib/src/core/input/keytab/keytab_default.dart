@@ -35,7 +35,12 @@ key Backtab     -Ansi  : "\t"
 key Return-Shift-NewLine : "\r"
 key Return-Shift+NewLine : "\r\n"
 
-key Return+Shift         : "\EOM"
+key Return+Shift         : "\E[13;2u"
+
+key Enter-Shift-NewLine  : "\r"
+key Enter-Shift+NewLine  : "\r\n"
+
+key Enter+Shift          : "\E[13;2u"
 
 key Backspace  +Alt : "\x17"
 

@@ -10,6 +10,21 @@ void main() {
       terminal.keyInput(TerminalKey.numpadEnter);
       expect(output, ['\r']);
     });
+
+    test('supports enter', () {
+      final output = <String>[];
+      final terminal = Terminal(onOutput: output.add);
+      terminal.keyInput(TerminalKey.enter);
+      expect(output, ['\r']);
+    });
+
+    test('preserves shift enter as csi-u', () {
+      final output = <String>[];
+      final terminal = Terminal(onOutput: output.add);
+      terminal.keyInput(TerminalKey.enter, shift: true);
+      terminal.keyInput(TerminalKey.returnKey, shift: true);
+      expect(output, ['\x1b[13;2u', '\x1b[13;2u']);
+    });
   });
 
   group('KeytabInputHandler', () {
