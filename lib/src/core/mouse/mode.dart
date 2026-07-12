@@ -30,6 +30,9 @@ enum MouseReportMode {
   /// unlimited.
   sgr,
 
+  /// Like [sgr], but coordinates are reported in pixels instead of cells.
+  sgrPixels,
+
   /// Similar to [sgr], the difference is that the button id is encoded as
   /// `32 + code`.
   urxvt,

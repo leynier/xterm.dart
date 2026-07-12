@@ -22,12 +22,27 @@ class TerminalMouseEvent {
   /// The platform of the terminal.
   final TerminalTargetPlatform platform;
 
+  final CellOffset? pixelPosition;
+
+  final bool motion;
+
+  final bool ctrl;
+
+  final bool alt;
+
+  final bool shift;
+
   TerminalMouseEvent({
     required this.button,
     required this.buttonState,
     required this.position,
     required this.state,
     required this.platform,
+    this.pixelPosition,
+    this.motion = false,
+    this.ctrl = false,
+    this.alt = false,
+    this.shift = false,
   });
 }
 
@@ -67,14 +82,10 @@ class ClickMouseHandler implements TerminalMouseHandler {
     switch (event.state.mouseMode) {
       case MouseMode.clickOnly:
         // Only clicks and only the first 3 buttons are reported.
-        if (event.buttonState == TerminalMouseButtonState.down &&
+        if (!event.motion &&
+            event.buttonState == TerminalMouseButtonState.down &&
             (event.button.id < 3)) {
-          return MouseReporter.report(
-            event.button,
-            event.buttonState,
-            event.position,
-            event.state.mouseReportMode,
-          );
+          return _report(event);
         }
         return null;
       case MouseMode.none:
@@ -103,12 +114,30 @@ class UpDownMouseHandler implements TerminalMouseHandler {
             event.buttonState == TerminalMouseButtonState.up) {
           return null;
         }
-        return MouseReporter.report(
-          event.button,
-          event.buttonState,
-          event.position,
-          event.state.mouseReportMode,
-        );
+        if (event.motion) {
+          if (event.state.mouseMode == MouseMode.upDownScroll) {
+            return null;
+          }
+          if (event.state.mouseMode == MouseMode.upDownScrollDrag &&
+              event.button == TerminalMouseButton.none) {
+            return null;
+          }
+        }
+        return _report(event);
     }
   }
+}
+
+String _report(TerminalMouseEvent event) {
+  return MouseReporter.report(
+    event.button,
+    event.buttonState,
+    event.position,
+    event.state.mouseReportMode,
+    pixelPosition: event.pixelPosition,
+    motion: event.motion,
+    ctrl: event.ctrl,
+    alt: event.alt,
+    shift: event.shift,
+  );
 }

@@ -8,17 +8,28 @@ abstract class MouseReporter {
     TerminalMouseButton button,
     TerminalMouseButtonState state,
     CellOffset position,
-    MouseReportMode reportMode,
-  ) {
+    MouseReportMode reportMode, {
+    CellOffset? pixelPosition,
+    bool motion = false,
+    bool ctrl = false,
+    bool alt = false,
+    bool shift = false,
+  }) {
+    final resolvedPosition = reportMode == MouseReportMode.sgrPixels
+        ? pixelPosition ?? position
+        : position;
     // x and y offsets have to be incremented by 1 as the offset if 0-based,
     // The position has to be reported using 1-based coordinates.
-    final x = position.x + 1;
-    final y = position.y + 1;
+    final x = resolvedPosition.x + 1;
+    final y = resolvedPosition.y + 1;
+    var buttonID = state == TerminalMouseButtonState.up ? 3 : button.id;
+    if (motion) buttonID = button.id + 32;
+    if (shift) buttonID += 4;
+    if (alt) buttonID += 8;
+    if (ctrl) buttonID += 16;
     switch (reportMode) {
       case MouseReportMode.normal:
       case MouseReportMode.utf:
-        // Button ID 3 is used to signal a button release.
-        final buttonID = state == TerminalMouseButtonState.up ? 3 : button.id;
         // The button ID is reported as shifted by 32 to produce a printable
         // character.
         final btn = String.fromCharCode(32 + buttonID);
@@ -32,17 +43,18 @@ abstract class MouseReporter {
         final row = (reportMode == MouseReportMode.normal && y > 223) ||
                 (reportMode == MouseReportMode.utf && y > 2015)
             ? '\x00'
-            : String.fromCharCode(32 + y + 1);
+            : String.fromCharCode(32 + y);
         return "\x1b[M$btn$col$row";
       case MouseReportMode.sgr:
-        final buttonID = button.id;
+      case MouseReportMode.sgrPixels:
+        buttonID = motion ? button.id + 32 : button.id;
+        if (shift) buttonID += 4;
+        if (alt) buttonID += 8;
+        if (ctrl) buttonID += 16;
         final upDown = state == TerminalMouseButtonState.down ? 'M' : 'm';
         return "\x1b[<$buttonID;$x;$y$upDown";
       case MouseReportMode.urxvt:
-        // The button ID uses the same id as to report it as in normal mode.
-        final buttonID =
-            32 + (state == TerminalMouseButtonState.up ? 3 : button.id);
-        return "\x1b[$buttonID;$x;${y}M";
+        return "\x1b[${32 + buttonID};$x;${y}M";
     }
   }
 }

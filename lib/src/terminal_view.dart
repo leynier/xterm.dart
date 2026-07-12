@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -49,6 +50,9 @@ class TerminalView extends StatefulWidget {
     this.readOnly = false,
     this.hardwareKeyboardOnly = false,
     this.simulateScroll = true,
+    this.mouseWheelSensitivity = 1,
+    this.onPaste,
+    this.onCopy,
   });
 
   /// The underlying terminal that this widget renders.
@@ -144,6 +148,15 @@ class TerminalView extends StatefulWidget {
   /// keys to the application. This is standard behavior for most terminal
   /// emulators. True by default.
   final bool simulateScroll;
+
+  /// Multiplier for mouse reports sent to fullscreen terminal applications.
+  final int mouseWheelSensitivity;
+
+  /// Overrides the default system clipboard paste action.
+  final Future<void> Function()? onPaste;
+
+  /// Overrides the default system clipboard copy action.
+  final Future<void> Function(String text)? onCopy;
 
   @override
   State<TerminalView> createState() => TerminalViewState();
@@ -247,8 +260,11 @@ class TerminalViewState extends State<TerminalView> {
 
     child = TerminalScrollGestureHandler(
       terminal: widget.terminal,
+      controller: _controller,
       simulateScroll: widget.simulateScroll,
+      mouseWheelSensitivity: widget.mouseWheelSensitivity,
       getCellOffset: (offset) => renderTerminal.getCellOffset(offset),
+      getPixelOffset: (offset) => renderTerminal.getPixelOffset(offset),
       getLineHeight: () => renderTerminal.lineHeight,
       child: child,
     );
@@ -294,6 +310,8 @@ class TerminalViewState extends State<TerminalView> {
     child = TerminalActions(
       terminal: widget.terminal,
       controller: _controller,
+      onPaste: widget.onPaste,
+      onCopy: widget.onCopy,
       child: child,
     );
 
@@ -404,6 +422,11 @@ class TerminalViewState extends State<TerminalView> {
       return resultOverride;
     }
 
+    if (_shouldCopySelectionWithControlC(event)) {
+      Actions.invoke(focusNode.context!, CopySelectionTextIntent.copy);
+      return KeyEventResult.handled;
+    }
+
     // ignore: invalid_use_of_protected_member
     final shortcutResult = _shortcutManager.handleKeypress(
       focusNode.context!,
@@ -436,6 +459,21 @@ class TerminalViewState extends State<TerminalView> {
     }
 
     return handled ? KeyEventResult.handled : KeyEventResult.ignored;
+  }
+
+  bool _shouldCopySelectionWithControlC(KeyEvent event) {
+    if (event is! KeyDownEvent || _controller.selection == null) {
+      return false;
+    }
+    if (defaultTargetPlatform == TargetPlatform.macOS ||
+        defaultTargetPlatform == TargetPlatform.iOS) {
+      return false;
+    }
+    return event.logicalKey == LogicalKeyboardKey.keyC &&
+        HardwareKeyboard.instance.isControlPressed &&
+        !HardwareKeyboard.instance.isShiftPressed &&
+        !HardwareKeyboard.instance.isAltPressed &&
+        !HardwareKeyboard.instance.isMetaPressed;
   }
 
   void _onKeyboardShow() {

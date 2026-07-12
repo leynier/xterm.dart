@@ -1,4 +1,5 @@
 import 'package:flutter/gestures.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:xterm/src/core/mouse/button.dart';
 import 'package:xterm/src/core/mouse/button_state.dart';
@@ -57,33 +58,48 @@ class _TerminalGestureHandlerState extends State<TerminalGestureHandler> {
 
   DragStartDetails? _lastDragStartDetails;
 
+  Offset? _lastDragPosition;
+
+  bool _primaryDownReported = false;
+
+  bool _forwardingDrag = false;
+
   LongPressStartDetails? _lastLongPressStartDetails;
 
   @override
   Widget build(BuildContext context) {
-    return TerminalGestureDetector(
-      child: widget.child,
-      onTapUp: widget.onTapUp,
-      onSingleTapUp: onSingleTapUp,
-      onTapDown: onTapDown,
-      onSecondaryTapDown: onSecondaryTapDown,
-      onSecondaryTapUp: onSecondaryTapUp,
-      onTertiaryTapDown: onSecondaryTapDown,
-      onTertiaryTapUp: onSecondaryTapUp,
-      onLongPressStart: onLongPressStart,
-      onLongPressMoveUpdate: onLongPressMoveUpdate,
-      // onLongPressUp: onLongPressUp,
-      onDragStart: onDragStart,
-      onDragUpdate: onDragUpdate,
-      onDoubleTapDown: onDoubleTapDown,
+    return MouseRegion(
+      onHover: onHover,
+      child: TerminalGestureDetector(
+        child: widget.child,
+        onTapUp: onTapUp,
+        onSingleTapUp: onSingleTapUp,
+        onTapDown: onTapDown,
+        onSecondaryTapDown: onSecondaryTapDown,
+        onSecondaryTapUp: onSecondaryTapUp,
+        onTertiaryTapDown: onTertiaryTapDown,
+        onTertiaryTapUp: onTertiaryTapUp,
+        onLongPressStart: onLongPressStart,
+        onLongPressMoveUpdate: onLongPressMoveUpdate,
+        onDragStart: onDragStart,
+        onDragUpdate: onDragUpdate,
+        onDragEnd: onDragEnd,
+        onDragCancel: onDragCancel,
+        onDoubleTapDown: onDoubleTapDown,
+      ),
     );
   }
 
-  bool get _shouldSendTapEvent =>
+  bool _shouldSendPointerInput(PointerInput input) =>
       !widget.readOnly &&
-      widget.terminalController.shouldSendPointerInput(PointerInput.tap);
+      !HardwareKeyboard.instance.isShiftPressed &&
+      widget.terminalController.shouldSendPointerInput(input);
 
-  void _tapDown(
+  bool get _ctrlPressed => HardwareKeyboard.instance.isControlPressed;
+
+  bool get _altPressed => HardwareKeyboard.instance.isAltPressed;
+
+  bool _tapDown(
     GestureTapDownCallback? callback,
     TapDownDetails details,
     TerminalMouseButton button, {
@@ -91,17 +107,20 @@ class _TerminalGestureHandlerState extends State<TerminalGestureHandler> {
   }) {
     // Check if the terminal should and can handle the tap down event.
     var handled = false;
-    if (_shouldSendTapEvent) {
+    if (_shouldSendPointerInput(PointerInput.tap)) {
       handled = renderTerminal.mouseEvent(
         button,
         TerminalMouseButtonState.down,
         details.localPosition,
+        ctrl: _ctrlPressed,
+        alt: _altPressed,
       );
     }
     // If the event was not handled by the terminal, use the supplied callback.
     if (!handled || forceCallback) {
       callback?.call(details);
     }
+    return handled;
   }
 
   void _tapUp(
@@ -112,11 +131,13 @@ class _TerminalGestureHandlerState extends State<TerminalGestureHandler> {
   }) {
     // Check if the terminal should and can handle the tap up event.
     var handled = false;
-    if (_shouldSendTapEvent) {
+    if (_shouldSendPointerInput(PointerInput.tap)) {
       handled = renderTerminal.mouseEvent(
         button,
         TerminalMouseButtonState.up,
         details.localPosition,
+        ctrl: _ctrlPressed,
+        alt: _altPressed,
       );
     }
     // If the event was not handled by the terminal, use the supplied callback.
@@ -128,7 +149,7 @@ class _TerminalGestureHandlerState extends State<TerminalGestureHandler> {
   void onTapDown(TapDownDetails details) {
     // onTapDown is special, as it will always call the supplied callback.
     // The TerminalView depends on it to bring the terminal into focus.
-    _tapDown(
+    _primaryDownReported = _tapDown(
       widget.onTapDown,
       details,
       TerminalMouseButton.left,
@@ -136,8 +157,25 @@ class _TerminalGestureHandlerState extends State<TerminalGestureHandler> {
     );
   }
 
+  void onTapUp(TapUpDetails details) {
+    if (!_primaryDownReported) {
+      widget.onTapUp?.call(details);
+    }
+  }
+
   void onSingleTapUp(TapUpDetails details) {
-    _tapUp(widget.onSingleTapUp, details, TerminalMouseButton.left);
+    if (_primaryDownReported) {
+      renderTerminal.mouseEvent(
+        TerminalMouseButton.left,
+        TerminalMouseButtonState.up,
+        details.localPosition,
+        ctrl: _ctrlPressed,
+        alt: _altPressed,
+      );
+      _primaryDownReported = false;
+      return;
+    }
+    widget.onSingleTapUp?.call(details);
   }
 
   void onSecondaryTapDown(TapDownDetails details) {
@@ -153,11 +191,13 @@ class _TerminalGestureHandlerState extends State<TerminalGestureHandler> {
   }
 
   void onTertiaryTapUp(TapUpDetails details) {
-    _tapUp(widget.onTertiaryTapUp, details, TerminalMouseButton.right);
+    _tapUp(widget.onTertiaryTapUp, details, TerminalMouseButton.middle);
   }
 
   void onDoubleTapDown(TapDownDetails details) {
-    renderTerminal.selectWord(details.localPosition);
+    if (!_primaryDownReported) {
+      renderTerminal.selectWord(details.localPosition);
+    }
   }
 
   void onLongPressStart(LongPressStartDetails details) {
@@ -176,6 +216,20 @@ class _TerminalGestureHandlerState extends State<TerminalGestureHandler> {
 
   void onDragStart(DragStartDetails details) {
     _lastDragStartDetails = details;
+    _lastDragPosition = details.localPosition;
+    _forwardingDrag =
+        _primaryDownReported && _shouldSendPointerInput(PointerInput.drag);
+    if (_forwardingDrag) {
+      return;
+    }
+    if (_primaryDownReported) {
+      renderTerminal.mouseEvent(
+        TerminalMouseButton.left,
+        TerminalMouseButtonState.up,
+        details.localPosition,
+      );
+      _primaryDownReported = false;
+    }
 
     details.kind == PointerDeviceKind.mouse
         ? renderTerminal.selectCharacters(details.localPosition)
@@ -183,9 +237,55 @@ class _TerminalGestureHandlerState extends State<TerminalGestureHandler> {
   }
 
   void onDragUpdate(DragUpdateDetails details) {
+    _lastDragPosition = details.localPosition;
+    if (_forwardingDrag) {
+      renderTerminal.mouseEvent(
+        TerminalMouseButton.left,
+        TerminalMouseButtonState.down,
+        details.localPosition,
+        motion: true,
+        ctrl: _ctrlPressed,
+        alt: _altPressed,
+      );
+      return;
+    }
     renderTerminal.selectCharacters(
       _lastDragStartDetails!.localPosition,
       details.localPosition,
+    );
+  }
+
+  void onDragEnd(DragEndDetails details) => _finishDrag();
+
+  void onDragCancel() => _finishDrag();
+
+  void _finishDrag() {
+    final position = _lastDragPosition;
+    if (_forwardingDrag && _primaryDownReported && position != null) {
+      renderTerminal.mouseEvent(
+        TerminalMouseButton.left,
+        TerminalMouseButtonState.up,
+        position,
+        ctrl: _ctrlPressed,
+        alt: _altPressed,
+      );
+    }
+    _primaryDownReported = false;
+    _forwardingDrag = false;
+    _lastDragPosition = null;
+  }
+
+  void onHover(PointerHoverEvent event) {
+    if (!_shouldSendPointerInput(PointerInput.move)) {
+      return;
+    }
+    renderTerminal.mouseEvent(
+      TerminalMouseButton.none,
+      TerminalMouseButtonState.down,
+      event.localPosition,
+      motion: true,
+      ctrl: _ctrlPressed,
+      alt: _altPressed,
     );
   }
 }

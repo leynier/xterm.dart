@@ -46,7 +46,40 @@ void main() {
         CellOffset(10, 10),
       );
 
-      expect(output, ['\x1B[M +,']);
+      expect(output, ['\x1B[M ++']);
+    });
+
+    test('honors drag, move, and sgr-pixels tracking modes', () {
+      final output = <String>[];
+      final terminal = Terminal(onOutput: output.add);
+
+      terminal.write('\x1b[?1002h\x1b[?1006h');
+      terminal.mouseInput(
+        TerminalMouseButton.left,
+        TerminalMouseButtonState.down,
+        CellOffset(1, 2),
+        motion: true,
+      );
+      terminal.mouseInput(
+        TerminalMouseButton.none,
+        TerminalMouseButtonState.down,
+        CellOffset(2, 3),
+        motion: true,
+      );
+
+      expect(output, <String>['\x1B[<32;2;3M']);
+
+      terminal.write('\x1b[?1003h\x1b[?1016h');
+      terminal.mouseInput(
+        TerminalMouseButton.none,
+        TerminalMouseButtonState.down,
+        CellOffset(2, 3),
+        pixelPosition: CellOffset(20, 30),
+        motion: true,
+      );
+
+      expect(output.last, '\x1B[<35;21;31M');
+      expect(terminal.mouseReportMode, MouseReportMode.sgrPixels);
     });
   });
 
