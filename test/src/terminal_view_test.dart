@@ -304,6 +304,39 @@ void main() {
       expect(tapCount, 0);
     });
 
+    testWidgets('tracked double clicks release both button presses', (
+      tester,
+    ) async {
+      final output = <String>[];
+      var tapCount = 0;
+      final terminal = Terminal(onOutput: output.add)
+        ..write('\x1b[?1000h\x1b[?1006h');
+      final controller = TerminalController(pointerInputs: PointerInputs.all());
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: TerminalView(
+              terminal,
+              controller: controller,
+              onTapUp: (details, offset) => tapCount += 1,
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byType(TerminalView));
+      await tester.tap(find.byType(TerminalView));
+      await tester.pump(kDoubleTapTimeout);
+
+      expect(output, hasLength(4));
+      expect(output[0], endsWith('M'));
+      expect(output[1], endsWith('m'));
+      expect(output[2], endsWith('M'));
+      expect(output[3], endsWith('m'));
+      expect(tapCount, 0);
+    });
+
     testWidgets('forwards mouse drag motion when tracking is active', (
       tester,
     ) async {

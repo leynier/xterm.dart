@@ -556,10 +556,11 @@ class MockEscapeHandler extends _i1.Mock implements _i2.EscapeHandler {
         returnValueForMissingStub: null,
       );
   @override
-  void setMouseReportMode(_i3.MouseReportMode? mode) => super.noSuchMethod(
+  void setMouseReportMode(_i3.MouseReportMode? mode, bool? enabled) =>
+      super.noSuchMethod(
         Invocation.method(
           #setMouseReportMode,
-          [mode],
+          [mode, enabled],
         ),
         returnValueForMissingStub: null,
       );

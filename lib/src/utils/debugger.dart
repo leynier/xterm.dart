@@ -425,8 +425,8 @@ class _TerminalDebuggerHandler implements EscapeHandler {
   }
 
   @override
-  void setMouseReportMode(MouseReportMode mode) {
-    onCommand('setMouseReportMode($mode)');
+  void setMouseReportMode(MouseReportMode mode, bool enabled) {
+    onCommand('setMouseReportMode($mode, $enabled)');
   }
 
   @override

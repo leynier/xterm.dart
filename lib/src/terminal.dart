@@ -135,6 +135,8 @@ class Terminal with Observable implements TerminalState, EscapeHandler {
 
   MouseReportMode _mouseReportMode = MouseReportMode.normal;
 
+  final List<MouseReportMode> _activeMouseReportModes = <MouseReportMode>[];
+
   bool _cursorBlinkMode = false;
 
   bool _cursorVisibleMode = true;
@@ -746,8 +748,14 @@ class Terminal with Observable implements TerminalState, EscapeHandler {
   }
 
   @override
-  void setMouseReportMode(MouseReportMode mode) {
-    _mouseReportMode = mode;
+  void setMouseReportMode(MouseReportMode mode, bool enabled) {
+    _activeMouseReportModes.remove(mode);
+    if (enabled) {
+      _activeMouseReportModes.add(mode);
+    }
+    _mouseReportMode = _activeMouseReportModes.isEmpty
+        ? MouseReportMode.normal
+        : _activeMouseReportModes.last;
   }
 
   @override

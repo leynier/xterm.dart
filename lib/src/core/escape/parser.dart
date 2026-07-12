@@ -1001,23 +1001,15 @@ class EscapeParser {
       case 1004:
         return handler.setReportFocusMode(enabled);
       case 1005:
-        return enabled
-            ? handler.setMouseReportMode(MouseReportMode.utf)
-            : handler.setMouseReportMode(MouseReportMode.normal);
+        return handler.setMouseReportMode(MouseReportMode.utf, enabled);
       case 1006:
-        return enabled
-            ? handler.setMouseReportMode(MouseReportMode.sgr)
-            : handler.setMouseReportMode(MouseReportMode.normal);
+        return handler.setMouseReportMode(MouseReportMode.sgr, enabled);
       case 1007:
         return handler.setAltBufferMouseScrollMode(enabled);
       case 1015:
-        return enabled
-            ? handler.setMouseReportMode(MouseReportMode.urxvt)
-            : handler.setMouseReportMode(MouseReportMode.normal);
+        return handler.setMouseReportMode(MouseReportMode.urxvt, enabled);
       case 1016:
-        return enabled
-            ? handler.setMouseReportMode(MouseReportMode.sgrPixels)
-            : handler.setMouseReportMode(MouseReportMode.sgr);
+        return handler.setMouseReportMode(MouseReportMode.sgrPixels, enabled);
       case 1047:
         if (enabled) {
           handler.useAltBuffer();

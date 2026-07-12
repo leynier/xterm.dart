@@ -80,6 +80,18 @@ void main() {
 
       expect(output.last, '\x1B[<35;21;31M');
       expect(terminal.mouseReportMode, MouseReportMode.sgrPixels);
+
+      terminal.write('\x1b[?1016l');
+
+      expect(terminal.mouseReportMode, MouseReportMode.sgr);
+
+      terminal.write('\x1b[?1016h\x1b[?1006l');
+
+      expect(terminal.mouseReportMode, MouseReportMode.sgrPixels);
+
+      terminal.write('\x1b[?1016l\x1b[?1000h');
+
+      expect(terminal.mouseReportMode, MouseReportMode.normal);
     });
   });
 

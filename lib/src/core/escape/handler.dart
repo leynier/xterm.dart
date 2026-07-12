@@ -139,7 +139,7 @@ abstract class EscapeHandler {
 
   void setReportFocusMode(bool enabled);
 
-  void setMouseReportMode(MouseReportMode mode);
+  void setMouseReportMode(MouseReportMode mode, bool enabled);
 
   void setAltBufferMouseScrollMode(bool enabled);
 

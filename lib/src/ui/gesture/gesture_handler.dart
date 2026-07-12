@@ -62,6 +62,8 @@ class _TerminalGestureHandlerState extends State<TerminalGestureHandler> {
 
   bool _primaryDownReported = false;
 
+  bool _trackedTapUpHandled = false;
+
   bool _forwardingDrag = false;
 
   LongPressStartDetails? _lastLongPressStartDetails;
@@ -149,6 +151,7 @@ class _TerminalGestureHandlerState extends State<TerminalGestureHandler> {
   void onTapDown(TapDownDetails details) {
     // onTapDown is special, as it will always call the supplied callback.
     // The TerminalView depends on it to bring the terminal into focus.
+    _trackedTapUpHandled = false;
     _primaryDownReported = _tapDown(
       widget.onTapDown,
       details,
@@ -158,12 +161,6 @@ class _TerminalGestureHandlerState extends State<TerminalGestureHandler> {
   }
 
   void onTapUp(TapUpDetails details) {
-    if (!_primaryDownReported) {
-      widget.onTapUp?.call(details);
-    }
-  }
-
-  void onSingleTapUp(TapUpDetails details) {
     if (_primaryDownReported) {
       renderTerminal.mouseEvent(
         TerminalMouseButton.left,
@@ -173,6 +170,15 @@ class _TerminalGestureHandlerState extends State<TerminalGestureHandler> {
         alt: _altPressed,
       );
       _primaryDownReported = false;
+      _trackedTapUpHandled = true;
+      return;
+    }
+    widget.onTapUp?.call(details);
+  }
+
+  void onSingleTapUp(TapUpDetails details) {
+    if (_trackedTapUpHandled) {
+      _trackedTapUpHandled = false;
       return;
     }
     widget.onSingleTapUp?.call(details);
