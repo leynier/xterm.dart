@@ -231,25 +231,24 @@ class IndexAwareCircularBuffer<T extends IndexedItem> {
 
   /// Replaces all elements in the list with [replacement].
   void replaceWith(List<T> replacement) {
-    for (var i = 0; i < _length; i++) {
-      _dropChild(i);
-    }
-
     var copyStart = 0;
     if (replacement.length > maxLength) {
       copyStart = replacement.length - maxLength;
     }
 
-    for (var i = 0; i < copyStart; i++) {
+    final copyLength = replacement.length - copyStart;
+
+    for (var i = 0; i < _length; i++) {
       _dropChild(i);
     }
 
-    final copyLength = replacement.length - copyStart;
+    // Reflow results are adopted at physical index zero, even when the
+    // circular buffer currently starts elsewhere.
+    _startIndex = 0;
     for (var i = 0; i < copyLength; i++) {
       _adoptChild(i, replacement[copyStart + i]);
     }
 
-    _startIndex = 0;
     _length = copyLength;
   }
 

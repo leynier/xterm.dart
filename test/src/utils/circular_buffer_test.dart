@@ -64,6 +64,21 @@ void main() {
       expect(cl[9], 10.indexed);
     });
 
+    test("replaceWith resets a circular start index", () {
+      final cl = IndexAwareCircularBuffer<IndexedValue<int>>(10);
+      cl.pushAll(
+        List<int>.generate(5, (index) => index).map(IndexedValue.new),
+      );
+      cl.trimStart(2);
+
+      cl.replaceWith(<IndexedValue<int>>[10.indexed, 11.indexed, 12.indexed]);
+
+      expect(
+          cl.toList(), <IndexedValue<int>>[10.indexed, 11.indexed, 12.indexed]);
+      expect(cl[0].index, 0);
+      expect(cl[2].index, 2);
+    });
+
     test("change max value after circle", () {
       final cl = IndexAwareCircularBuffer<IndexedValue<int>>(10);
       cl.pushAll(
