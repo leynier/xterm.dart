@@ -177,6 +177,26 @@ void main() {
     });
   });
 
+  group('BufferLine.eraseRange', () {
+    test('ignores a range that starts after the line', () {
+      final line = BufferLine(512);
+      line.setCodePoint(0, 'a'.codeUnitAt(0));
+
+      line.eraseRange(844, 1050, CursorStyle.empty);
+
+      expect(line.getCodePoint(0), equals('a'.codeUnitAt(0)));
+    });
+
+    test('ignores an empty range at the start of the line', () {
+      final line = BufferLine(10);
+      line.setCodePoint(0, 'a'.codeUnitAt(0));
+
+      line.eraseRange(0, 0, CursorStyle.empty);
+
+      expect(line.getCodePoint(0), equals('a'.codeUnitAt(0)));
+    });
+  });
+
   group('Buffer.createAnchor', () {
     test('works', () {
       final terminal = Terminal();
