@@ -167,7 +167,13 @@ class Buffer {
 
   /// The line at the current cursor position.
   BufferLine get currentLine {
-    return lines[absoluteCursorY];
+    final line = lines[absoluteCursorY];
+    // A row retained by a scroll-region or snapshot transition can still
+    // carry the previous viewport width when output reaches it.
+    if (line.length < viewWidth) {
+      line.resize(viewWidth);
+    }
+    return line;
   }
 
   void backspace() {
