@@ -47,6 +47,8 @@ class Buffer {
 
   var _savedCursorY = 0;
 
+  var _savedCursorPendingWrap = false;
+
   final _savedCursorStyle = CursorStyle();
 
   final charset = Charset();
@@ -367,6 +369,7 @@ class Buffer {
   void saveCursor() {
     _savedCursorX = _cursorX;
     _savedCursorY = _cursorY;
+    _savedCursorPendingWrap = _cursorX == viewWidth;
     _savedCursorStyle.foreground = terminal.cursor.foreground;
     _savedCursorStyle.background = terminal.cursor.background;
     _savedCursorStyle.attrs = terminal.cursor.attrs;
@@ -375,7 +378,9 @@ class Buffer {
 
   /// Restore cursor position, charmap and text attributes.
   void restoreCursor() {
-    _cursorX = _savedCursorX.clamp(0, viewWidth);
+    _cursorX = _savedCursorPendingWrap
+        ? _savedCursorX.clamp(0, viewWidth)
+        : _savedCursorX.clamp(0, viewWidth - 1);
     _cursorY = _savedCursorY.clamp(0, viewHeight - 1);
     terminal.cursor.foreground = _savedCursorStyle.foreground;
     terminal.cursor.background = _savedCursorStyle.background;

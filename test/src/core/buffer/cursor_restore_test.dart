@@ -12,6 +12,17 @@ void main() {
       expect(terminal.buffer.lines[1].toString(), 'x');
     });
 
+    test('keeps the saved insertion column after a width expansion', () {
+      final terminal = Terminal(reflowEnabled: false)
+        ..resize(4, 2)
+        ..write('abcd\x1b7')
+        ..resize(8, 2)
+        ..write('\x1b8X');
+
+      expect(terminal.buffer.lines[0].toString(), 'abcdX');
+      expect(terminal.buffer.lines[1].toString(), isEmpty);
+    });
+
     test('preserves saved coordinates across a temporary shrink', () {
       final terminal = Terminal(maxLines: 100, reflowEnabled: false)
         ..resize(8, 5)
@@ -22,6 +33,16 @@ void main() {
 
       expect(terminal.buffer.cursorX, 6);
       expect(terminal.buffer.cursorY, 4);
+    });
+
+    test('clamps an ordinary saved column after a width shrink', () {
+      final terminal = Terminal(reflowEnabled: false)
+        ..resize(8, 2)
+        ..write('\x1b[1;7H\x1b7')
+        ..resize(4, 2)
+        ..write('\x1b8\x1b[2DX');
+
+      expect(terminal.buffer.lines[0].toString(), ' X');
     });
 
     test('keeps writeChar on the retained viewport', () {
