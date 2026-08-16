@@ -93,4 +93,51 @@ void main() {
       expect(terminal.buffer.lines[i].length, 13);
     }
   });
+
+  group('a hidden cursor in the main buffer', () {
+    // DECTCEM off: what every full-screen agent CLI leaves set for as long as
+    // it runs, which is also the state a restored session ends in.
+    const hideCursor = '\x1b[?25l';
+
+    test('truncates the buffer on resize by default', () {
+      final terminal = Terminal()..resize(20, 10);
+
+      terminal.write('${hideCursor}1234567890abcdefg');
+      terminal.resize(10, 10);
+
+      // The application is expected to redraw, so its cells are dropped
+      // rather than reflowed.
+      expect(terminal.buffer.lines[0].toString(), '1234567890');
+      expect(terminal.buffer.lines[1].toString(), isEmpty);
+    });
+
+    test('still reflows when the buffer holds restored history', () {
+      final terminal = Terminal(reflowWithHiddenCursor: true)..resize(20, 10);
+
+      terminal.write('${hideCursor}1234567890abcdefg');
+      terminal.resize(10, 10);
+
+      expect(terminal.buffer.lines[0].toString(), '1234567890');
+      expect(terminal.buffer.lines[1].toString(), 'abcdefg');
+      expect(terminal.buffer.lines[1].isWrapped, isTrue);
+    });
+
+    test('keeps scrollback that a wider viewport would have trimmed', () {
+      final terminal = Terminal(maxLines: 100, reflowWithHiddenCursor: true)
+        ..resize(20, 4);
+
+      terminal.write(hideCursor);
+      for (var line = 0; line < 12; line++) {
+        terminal.write('line-$line\r\n');
+      }
+      final before = terminal.buffer.lines.length;
+
+      terminal.resize(20, 8);
+
+      // Growing the viewport consumed scrollback to fill it, which for
+      // restored history is history the user came to read.
+      expect(terminal.buffer.lines.length, before);
+      expect(terminal.buffer.lines[0].toString(), 'line-0');
+    });
+  });
 }

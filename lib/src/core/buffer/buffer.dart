@@ -485,8 +485,14 @@ class Buffer {
   }
 
   void resize(int oldWidth, int oldHeight, int newWidth, int newHeight) {
-    final clearMainApplicationCells =
-        !isAltBuffer && !terminal.cursorVisibleMode;
+    // A hidden cursor in the main buffer is read as a full-screen application
+    // drawing itself: it will redraw after the resize, so its cells are cleared
+    // and truncated rather than reflowed. That holds for the viewport and not
+    // for the scrollback above it, which nothing redraws, so an emulator
+    // holding restored history opts out through [reflowWithHiddenCursor].
+    final clearMainApplicationCells = !isAltBuffer &&
+        !terminal.cursorVisibleMode &&
+        !terminal.reflowWithHiddenCursor;
 
     // 1. Adjust the height.
     if (newHeight > oldHeight) {

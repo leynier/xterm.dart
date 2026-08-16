@@ -82,6 +82,7 @@ class Terminal with Observable implements TerminalState, EscapeHandler {
     this.mouseHandler = defaultMouseHandler,
     this.onPrivateOSC,
     this.reflowEnabled = true,
+    this.reflowWithHiddenCursor = false,
     this.wordSeparators,
   });
 
@@ -222,6 +223,19 @@ class Terminal with Observable implements TerminalState, EscapeHandler {
   /// simply truncates lines. true by default.
   @override
   bool reflowEnabled;
+
+  /// Whether a hidden cursor in the main buffer still reflows on resize.
+  ///
+  /// A hidden cursor there is taken as a full-screen application drawing
+  /// itself, which will redraw after the resize, so the default is to truncate
+  /// rather than reflow lines it is about to overwrite anyway. That reasoning
+  /// only holds for the viewport: it also truncates the scrollback above it,
+  /// which no application redraws, and an agent TUI keeps the cursor hidden for
+  /// as long as it runs. Turn this on for an emulator whose contents are
+  /// restored history rather than a live screen. false by default, so a
+  /// terminal attached to a running program is unaffected.
+  @override
+  bool reflowWithHiddenCursor;
 
   /// Writes the data from the underlying program to the terminal. Calling this
   /// updates the states of the terminal and emits events such as [onBell] or
