@@ -15,6 +15,7 @@ This fork is consumed by Alera as a Git submodule while the terminal fixes are r
 - Clear stale alternate-buffer and main-buffer cells after resize so full-screen terminal apps do not show old rows after the viewport changes.
 - Skip app reflow while cursor-hidden apps redraw their own frame, preventing stale TUI content from being reintroduced during resize.
 - Reset the circular buffer origin before adopting reflow results so trimmed scrollback cannot expose stale rows with the old width.
+- Release circular-buffer rows when trimming scrollback so dropped terminal cells do not remain strongly referenced, and keep survivor indexes aligned.
 - Preserve empty cells between copied text columns when serializing selected buffer text. TUI apps can draw columns by moving the cursor instead of writing literal space characters; those visual gaps should copy as spaces.
 - Encode wheel reports with canonical button IDs and route wheel events in either buffer while an application has enabled mouse tracking.
 - Report button motion, hover motion, modifier keys, and SGR pixel coordinates for DEC mouse modes 1002, 1003, and 1016.

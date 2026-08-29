@@ -64,6 +64,24 @@ void main() {
       expect(cl[9], 10.indexed);
     });
 
+    test("trimStart releases removed items and reindexes survivors", () {
+      final cl = IndexAwareCircularBuffer<IndexedValue<int>>(10);
+      final values = List<IndexedValue<int>>.generate(
+        5,
+        (index) => IndexedValue(index),
+      );
+      cl.pushAll(values);
+
+      cl.trimStart(2);
+
+      expect(values[0].attached, isFalse);
+      expect(values[1].attached, isFalse);
+      expect(values[2].attached, isTrue);
+      expect(values[2].index, 0);
+      expect(values[4].index, 2);
+      expect(cl.toList(), <IndexedValue<int>>[2.indexed, 3.indexed, 4.indexed]);
+    });
+
     test("replaceWith resets a circular start index", () {
       final cl = IndexAwareCircularBuffer<IndexedValue<int>>(10);
       cl.pushAll(
