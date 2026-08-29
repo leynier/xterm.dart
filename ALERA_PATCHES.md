@@ -16,6 +16,8 @@ This fork is consumed by Alera as a Git submodule while the terminal fixes are r
 - Skip app reflow while cursor-hidden apps redraw their own frame, preventing stale TUI content from being reintroduced during resize.
 - Reset the circular buffer origin before adopting reflow results so trimmed scrollback cannot expose stale rows with the old width.
 - Release circular-buffer rows when trimming scrollback so dropped terminal cells do not remain strongly referenced, and keep survivor indexes aligned.
+- Compact buffer rows once they scroll into history, releasing the trailing all-zero capacity every row keeps for in-place edits. History rows regrow with zero cells if they re-enter the viewport, styled erases keep their colored cells, and word-boundary plus combining-mark reads clamp to the compacted row length.
+- Decode parser input into preallocated code-point blocks instead of `String.runes.toList()`, move buffer-line block copies through `setRange`, and reuse one `Paint` for solid rectangles so sustained output allocates less on the UI isolate.
 - Preserve empty cells between copied text columns when serializing selected buffer text. TUI apps can draw columns by moving the cursor instead of writing literal space characters; those visual gaps should copy as spaces.
 - Encode wheel reports with canonical button IDs and route wheel events in either buffer while an application has enabled mouse tracking.
 - Report button motion, hover motion, modifier keys, and SGR pixel coordinates for DEC mouse modes 1002, 1003, and 1016.

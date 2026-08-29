@@ -153,6 +153,11 @@ class Buffer {
       index = viewWidth - 1;
     }
 
+    // A compacted history row can be shorter than the viewport width; a cell
+    // beyond its length reads as empty.
+    if (index >= line.length) {
+      return false;
+    }
     if (index > 0 && line.getCodePoint(index) == 0) {
       final previousWidth = line.getWidth(index - 1);
       if (previousWidth == 2) {
@@ -284,6 +289,7 @@ class Buffer {
       if (_cursorY == _marginBottom) {
         if (marginTop == 0 && !isAltBuffer) {
           lines.insert(absoluteMarginBottom + 1, _newEmptyLine());
+          _compactScrolledOutLine();
         } else {
           scrollUp(1);
         }
@@ -300,10 +306,22 @@ class Buffer {
         scrollUp(1);
       } else {
         lines.push(_newEmptyLine());
+        _compactScrolledOutLine();
       }
     } else {
       // there're still lines so we simply move cursor down.
       moveCursorY(1);
+    }
+  }
+
+  /// Releases the capacity slack of the row that just left the viewport.
+  ///
+  /// Nothing writes to history rows through cursor operations, so this is the
+  /// moment a row's allocation stops needing room for in-place edits.
+  void _compactScrolledOutLine() {
+    final index = scrollBack - 1;
+    if (index >= 0) {
+      lines[index].compact();
     }
   }
 
@@ -543,6 +561,15 @@ class Buffer {
           ),
         );
       }
+
+      // Both branches rebuild history rows at the full new width; release the
+      // slack again for everything above the viewport. The terminal updates
+      // its view dimensions after this call, so the new viewport height is
+      // what separates history from visible rows here, not [scrollBack].
+      final historyRows = lines.length - newHeight;
+      for (var i = 0; i < historyRows; i++) {
+        lines[i].compact();
+      }
     }
   }
 
@@ -591,11 +618,17 @@ class Buffer {
     var start = position.x;
     var end = position.x;
 
+    // A compacted history row can be shorter than the viewport width; cells
+    // beyond its length read as empty.
+    int codePointAt(int index) {
+      return index < line.length ? line.getCodePoint(index) : 0;
+    }
+
     do {
       if (start == 0) {
         break;
       }
-      final char = line.getCodePoint(start - 1);
+      final char = codePointAt(start - 1);
       if (separators.contains(char)) {
         break;
       }
@@ -606,7 +639,7 @@ class Buffer {
       if (end >= viewWidth) {
         break;
       }
-      final char = line.getCodePoint(end);
+      final char = codePointAt(end);
       if (separators.contains(char)) {
         break;
       }

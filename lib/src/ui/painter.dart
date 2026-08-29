@@ -26,6 +26,11 @@ class TerminalPainter {
   /// [_textStyle] is changed, or when the system font changes.
   final _paragraphCache = ParagraphCache(10240);
 
+  /// Reused for solid rectangles so painting a frame does not allocate one
+  /// [Paint] per background cell. Draw calls record paint state by value, so
+  /// mutating it between calls is safe.
+  final _rectPaint = Paint();
+
   TerminalStyle get textStyle => _textStyle;
   TerminalStyle _textStyle;
   set textStyle(TerminalStyle value) {
@@ -143,9 +148,7 @@ class TerminalPainter {
     final endOffset =
         offset.translate(length * _cellSize.width, _cellSize.height);
 
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = 1;
+    final paint = _rectPaint..color = color;
 
     canvas.drawRect(
       Rect.fromPoints(offset, endOffset),
@@ -253,7 +256,7 @@ class TerminalPainter {
       color = resolveBackgroundColor(cellData.background);
     }
 
-    final paint = Paint()..color = color;
+    final paint = _rectPaint..color = color;
     final doubleWidth = cellData.content >> CellContent.widthShift == 2;
     final widthScale = doubleWidth ? 2 : 1;
     final size = Size(_cellSize.width * widthScale + 1, _cellSize.height);

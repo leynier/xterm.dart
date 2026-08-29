@@ -1,4 +1,5 @@
 import 'dart:collection';
+import 'dart:typed_data';
 
 class ByteConsumer {
   final _queue = ListQueue<List<int>>();
@@ -13,9 +14,29 @@ class ByteConsumer {
 
   void add(String data) {
     if (data.isEmpty) return;
-    final runes = data.runes.toList(growable: false);
-    _queue.addLast(runes);
-    _length += runes.length;
+    // Decode code points into a preallocated block instead of materializing
+    // `data.runes.toList()`, which grows a boxed list per chunk on the UI
+    // isolate. Semantics match [Runes]: valid surrogate pairs combine, and a
+    // lone surrogate yields its own code unit.
+    final units = Uint32List(data.length);
+    var count = 0;
+    for (var i = 0; i < data.length; i++) {
+      var unit = data.codeUnitAt(i);
+      if (unit >= 0xD800 && unit <= 0xDBFF && i + 1 < data.length) {
+        final next = data.codeUnitAt(i + 1);
+        if (next >= 0xDC00 && next <= 0xDFFF) {
+          unit = 0x10000 + ((unit - 0xD800) << 10) + (next - 0xDC00);
+          i++;
+        }
+      }
+      units[count++] = unit;
+    }
+    // A view avoids a second copy; the backing block is short-lived because
+    // consumed blocks are unreferenced after each parse pass.
+    final block =
+        count == data.length ? units : Uint32List.sublistView(units, 0, count);
+    _queue.addLast(block);
+    _length += count;
   }
 
   int peek() {

@@ -9,6 +9,10 @@ import 'package:xterm/src/utils/unicode_v11.dart';
 
 const _cellSize = 4;
 
+/// Skip compaction when it would release less than this many words (256
+/// bytes): the reallocation and copy would cost more than the memory saved.
+const _compactionMinSavedWords = 64;
+
 const _cellForeground = 0;
 
 const _cellBackground = 1;
@@ -157,7 +161,14 @@ class BufferLine with IndexedItem {
       start = 0;
     }
     if (end > _length) {
-      end = _length;
+      // A compacted or narrower history row can be shorter than the erase
+      // target. All-zero cells and absent cells render identically, so only
+      // regrow when the erase writes color or attributes that must persist.
+      if (style.foreground != 0 || style.background != 0 || style.attrs != 0) {
+        resize(end, clearNewCells: true);
+      } else {
+        end = _length;
+      }
     }
     if (start >= end) {
       return;
@@ -191,9 +202,8 @@ class BufferLine with IndexedItem {
       final moveStart = start * _cellSize;
       final moveEnd = (_length - count) * _cellSize;
       final moveOffset = count * _cellSize;
-      for (var i = moveStart; i < moveEnd; i++) {
-        _data[i] = _data[i + moveOffset];
-      }
+      // setRange on typed data is an overlap-safe block move.
+      _data.setRange(moveStart, moveEnd, _data, moveStart + moveOffset);
     }
     _removeExtendedTextCells(start, count);
 
@@ -230,9 +240,13 @@ class BufferLine with IndexedItem {
       final moveStart = start * _cellSize;
       final moveEnd = (_length - count) * _cellSize;
       final moveOffset = count * _cellSize;
-      for (var i = moveEnd - 1; i >= moveStart; i--) {
-        _data[i + moveOffset] = _data[i];
-      }
+      // setRange on typed data is an overlap-safe block move.
+      _data.setRange(
+        moveStart + moveOffset,
+        moveEnd + moveOffset,
+        _data,
+        moveStart,
+      );
     }
     _insertExtendedTextCells(start, count);
 
@@ -324,21 +338,60 @@ class BufferLine with IndexedItem {
   void copyFrom(BufferLine src, int srcCol, int dstCol, int len) {
     resize(dstCol + len);
 
-    // data.setRange(
-    //   dstCol * _cellSize,
-    //   (dstCol + len) * _cellSize,
-    //   Uint32List.sublistView(src.data, srcCol * _cellSize, len * _cellSize),
-    // );
+    _data.setRange(
+      dstCol * _cellSize,
+      (dstCol + len) * _cellSize,
+      src._data,
+      srcCol * _cellSize,
+    );
 
-    var srcOffset = srcCol * _cellSize;
-    var dstOffset = dstCol * _cellSize;
-
-    for (var i = 0; i < len * _cellSize; i++) {
-      _data[dstOffset++] = src._data[srcOffset++];
+    // Nothing to copy over and nothing stale to clear in the common case
+    // where neither line carries extended text.
+    if (src._extendedText != null || _extendedText != null) {
+      for (var i = 0; i < len; i++) {
+        _setExtendedText(dstCol + i, src._extendedText?[srcCol + i]);
+      }
     }
+  }
 
-    for (var i = 0; i < len; i++) {
-      _setExtendedText(dstCol + i, src._extendedText?[srcCol + i]);
+  /// Releases the slack a row keeps for in-place edits once it has scrolled
+  /// into history.
+  ///
+  /// Rows allocate capacity above their logical width and keep it after a
+  /// shrink, which is right for the active row but wasteful for scrollback
+  /// nobody writes to again. Dropping trailing all-zero cells is invisible:
+  /// a zero cell renders exactly like an absent cell, and [resize] regrows
+  /// with zeros if the row ever re-enters the viewport. Cells holding only a
+  /// color or attribute survive, so trailing styled erases keep painting.
+  void compact() {
+    var keepCells = _length;
+    while (keepCells > 0) {
+      final offset = (keepCells - 1) * _cellSize;
+      if (_data[offset + _cellForeground] != 0 ||
+          _data[offset + _cellBackground] != 0 ||
+          _data[offset + _cellAttributes] != 0 ||
+          _data[offset + _cellContent] != 0) {
+        break;
+      }
+      keepCells--;
+    }
+    // Keep the all-zero placeholder cell of a trailing wide character, so the
+    // pair stays addressable as two cells like everywhere else in the buffer.
+    if (keepCells > 0 && keepCells < _length && getWidth(keepCells - 1) == 2) {
+      keepCells++;
+    }
+    final keepWords = keepCells * _cellSize;
+    if (_data.length - keepWords < _compactionMinSavedWords) {
+      return;
+    }
+    _data = _data.sublist(0, keepWords);
+    _length = keepCells;
+    _trimExtendedText(keepCells);
+    for (var i = 0; i < _anchors.length; i++) {
+      final anchor = _anchors[i];
+      if (anchor.x > _length) {
+        anchor.reposition(_length);
+      }
     }
   }
 
