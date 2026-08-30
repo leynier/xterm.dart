@@ -6,7 +6,7 @@ This repository preserves the original Alera xterm.dart fork. New Alera integrat
 
 - Fork: <https://github.com/leynier/xterm.dart.git>
 - Integration and default branch: `next`
-- Branch policy: `next` is the only permanent remote branch; merged feature branches are deleted automatically.
+- Branch policy: `next` is the default integration branch and `master` mirrors the upstream default branch. Both are permanent; only merged feature branches are deleted automatically.
 - Upstream: <https://github.com/TerminalStudio/xterm.dart>
 - Scroll-region upstream pull request: <https://github.com/TerminalStudio/xterm.dart/pull/227>
 
@@ -33,3 +33,7 @@ Alera embeds terminal sessions that run interactive TUIs such as Claude Code, Co
 ## Consolidation
 
 The consolidated history contains `14ebe14844b5f35cff20c582f09fd97dd6bedc28` and all ten pre-consolidation branch tips. Tags and releases remain intact. Automatic tagging is disabled; a normal push to `next` does not publish a release.
+
+## Mirror automation
+
+The inherited `autotag.yml` workflow is disabled in GitHub Actions for this fork so updating the unmodified upstream `master` mirror cannot create tags. The `next` branch retains that workflow identity with a manual-only definition; ordinary pushes do not publish anything. Both permanent branches reject deletion, while mirror updates remain allowed.
