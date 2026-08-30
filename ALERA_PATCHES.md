@@ -1,11 +1,12 @@
 # Alera patches
 
-This fork is consumed by Alera as a Git submodule while the terminal fixes are reviewed upstream.
+This repository preserves the original Alera xterm.dart fork. New Alera integrations use https://github.com/leynier/xterm2. The original fixes remain in this repository and it is not archived.
 
 ## Fork metadata
 
 - Fork: <https://github.com/leynier/xterm.dart.git>
-- Integration branch: `next`
+- Integration and default branch: `next`
+- Branch policy: `next` is the only permanent remote branch; merged feature branches are deleted automatically.
 - Upstream: <https://github.com/TerminalStudio/xterm.dart>
 - Scroll-region upstream pull request: <https://github.com/TerminalStudio/xterm.dart/pull/227>
 
@@ -27,4 +28,8 @@ This fork is consumed by Alera as a Git submodule while the terminal fixes are r
 
 ## Why Alera carries this fork
 
-Alera embeds terminal sessions that run interactive TUIs such as Claude Code, Codex, OpenCode, Amp, Gemini, and similar agents. Those apps rely heavily on resize handling, scroll regions, alternate buffers, mouse reporting, cursor positioning, and visual columns. The fork keeps the minimal fixes available to Alera until upstream can merge and release them.
+Alera embeds terminal sessions that run interactive TUIs such as Claude Code, Codex, OpenCode, Amp, Gemini, and similar agents. Those apps rely heavily on resize handling, scroll regions, alternate buffers, mouse reporting, cursor positioning, and visual columns. The fork keeps the minimal fixes available to Alera for older consumers. The upstream pull request above was closed without merging.
+
+## Consolidation
+
+The consolidated history contains `14ebe14844b5f35cff20c582f09fd97dd6bedc28` and all ten pre-consolidation branch tips. Tags and releases remain intact. Automatic tagging is disabled; a normal push to `next` does not publish a release.
